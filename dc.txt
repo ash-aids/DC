@@ -1,0 +1,537 @@
+"""
+   Practical_1 - Design a distributed application using RPC for remote computation where client submits an integer value
+                 to the server and server calculates factorial and returns the result to the client program."""
+
+#rpc_server
+
+from xmlrpc.server import SimpleXMLRPCServer
+
+def compute_factorial(number):
+    
+    result = 1
+
+    if number > 1:
+        for i in range(1,number+1):
+            result *= i
+        return result
+    
+    return result
+
+server = SimpleXMLRPCServer(("localhost",8000))
+
+print("Server listening on port 8000")
+
+server.register_function(compute_factorial, 'compute_factorial')
+server.serve_forever()
+
+
+#rpc_client
+
+
+import xmlrpc.client
+
+server = xmlrpc.client.ServerProxy("http://localhost:8000")
+
+number = int(input("Enter an integer to compute factorial for: "))
+
+result = server.compute_factorial(number)
+
+print(f"The factorial of {number} is {result}")
+
+
+
+THEORY
+
+🔷 Distributed Computing:
+Distributed computing involves multiple computers (nodes) working together to solve a problem. In this setup, one machine (client) makes a request, and another machine (server) performs the task and returns the result.
+
+🔷 Remote Procedure Call (RPC):
+RPC allows a client to execute code (functions) located on a remote server as if it were a local function. It abstracts network communication by hiding it behind function calls.
+Client calls the function.
+RPC Mechanism handles serialization, sending, and receiving data.
+Server executes the function and returns the result.
+
+🔧 Working Mechanism:
+1. Server Program:
+Starts an RPC server on a specified port (e.g., 8000).
+Registers a function compute_factorial(number) that calculates factorial.
+Waits for client requests.
+
+2. Client Program:
+Connects to the server using ServerProxy.
+Takes an integer input from the user.
+Sends the input to the server for computation.
+Receives the factorial result and displays it.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+"""
+   Practical_2 - Design a distributed application using RMI for remote computation where client submits two strings to
+                 the server and server returns the concatenation of the given strings."""
+
+
+#rmi_server
+
+import Pyro4
+
+class  StringConcatenator:
+    @Pyro4.expose
+    def concatenate(self,str1,str2):
+        return str1+str2
+    
+def start_sever():
+    conacatenator =StringConcatenator()
+
+    daemon = Pyro4.Daemon()
+    url = daemon.register(conacatenator)
+
+    print("Server URL: ",url)
+
+    print("Server is ready.")
+    daemon.requestLoop()
+
+
+if __name__ == '__main__':
+    start_sever()
+
+------------------------------
+
+#rmi_client
+
+import Pyro4
+
+def main():
+    url = input("Enter server's url: ")
+
+    concatenator = Pyro4.Proxy(url)
+
+    str1 = input("Enter string 1: ")
+    str2 = input("enter string 2: ")
+
+    result = concatenator.concatenate(str1,str2)
+
+    print("Concatenated String is: ",result)
+
+if __name__ == "__main__":
+    main()
+
+
+THEORY
+
+🔷 Distributed Computing:
+In a distributed system, resources and tasks are spread across multiple machines. One machine (client) sends a request, and another machine (server) processes it and returns the result.
+
+🔷 Remote Method Invocation (RMI):
+Java RMI allows an object running in one Java Virtual Machine (JVM) to invoke methods on an object running in another JVM.
+Client and server communicate over the network using Java objects.
+Java RMI handles:
+Object serialization
+Method invocation
+Stub and skeleton communication
+
+🔷 Architecture Components:
+Remote Interface: Declares methods that can be called remotely.
+Remote Object (Server Implementation): Implements the remote interface.
+Server: Registers the remote object in the RMI registry.
+Client: Looks up the remote object from the registry and invokes its methods.
+
+💡 Advantages of RMI:
+Object-oriented communication.
+Strong type checking at compile time.
+Java-native solution for distributed applications.
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+'''Practical 3: Write code to simulate requests coming from clients and distribute them among the servers using the load balancing algorithms'''
+
+import random
+
+# List of available servers
+servers = ["Server1", "Server2", "Server3"]
+
+# Round Robin Load Balancer
+class RoundRobinLoadBalancer:
+    def __init__(self, servers):
+        self.servers = servers
+        self.current_index = 0
+
+    def get_server(self):
+        server = self.servers[self.current_index]
+        self.current_index = (self.current_index + 1) % len(self.servers)
+        return server
+
+# Random Load Balancer
+class RandomLoadBalancer:
+    def __init__(self, servers):
+        self.servers = servers
+
+    def get_server(self):
+        return random.choice(self.servers)
+
+def simulate_requests(load_balancer, num_requests):
+    for i in range(1, num_requests + 1):
+        server = load_balancer.get_server()
+        print(f"Request {i} routed to {server}")
+
+if __name__ == "__main__":
+    print("Round Robin Load Balancing:")
+    round_robin_lb = RoundRobinLoadBalancer(servers)
+    simulate_requests(round_robin_lb, 10)
+
+    print("\nRandom Load Balancing:")
+    random_lb = RandomLoadBalancer(servers)
+    simulate_requests(random_lb, 10)
+
+Theory:
+
+🔷 Load Balancing:
+Load balancing is the process of distributing client requests or network traffic across multiple servers to ensure no single server becomes a bottleneck. It improves:
+Resource utilization
+Throughput
+Response time
+Fault tolerance
+
+🔷 Common Load Balancing Algorithms:
+1. Round Robin
+📌 Concept:
+Round Robin is a simple and widely used algorithm where incoming requests are assigned to servers in a cyclic and sequential order. It doesn’t consider the current load or state of the servers.
+🧩 How it works:
+Maintain an index of the last used server.
+For each new request, increment the index.
+Assign the request to the next server in the list.
+Wrap around when the end of the list is reached.
+✅ Advantages:
+Easy to implement.
+Ensures even distribution of requests (if servers are equal).
+No server-specific data or monitoring needed.
+❌ Disadvantages:
+Ignores actual server load or processing power.
+Can overload slower servers if all are not equally capable.
+📘 Best used when:
+All servers have equal processing power and capability.
+Requests take roughly equal time to process.
+
+2. Random Selection Load Balancing
+📌 Concept:
+This algorithm randomly assigns each incoming request to one of the available servers.
+🧩 How it works:
+Use a random number generator to select a server.
+Assign the current request to that server.
+✅ Advantages:
+Very simple to implement.
+Doesn’t require tracking of previous requests or server states.
+Can sometimes mimic realistic usage patterns.
+❌ Disadvantages:
+No control over distribution → may lead to uneven load.
+Not ideal for critical systems needing predictability or fairness.
+📘 Best used when:
+The application is non-critical or stateless.
+You want to simulate natural randomness in traffic patterns.
+When load differences don't significantly affect performance.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+'''Practical 5: Design and develop a distributed application to find the coolest/hottest year from the available
+weather data. Use weather data from the Internet and process it using MapReduce. '''
+
+
+from mrjob.job import MRJob
+from mrjob.step import MRStep
+import csv
+from datetime import datetime
+
+class CalculateMaxMinTemperature(MRJob):
+
+    def steps(self):
+        return [
+            MRStep(mapper=self.mapper,
+                   reducer=self.reducer_find_max_min)
+        ]
+
+    def mapper(self, _, line):
+        # Skip header
+        if line.startswith('date'):
+            return
+
+        reader = csv.reader([line])
+        for row in reader:
+            try:
+                date = row[0]
+                tmx = float(row[2])
+                tmn = float(row[3])
+                yield "temperature_stats", (date, tmx, tmn)
+            except (IndexError, ValueError):
+                pass  # Skip lines with invalid data
+
+    def reducer_find_max_min(self, key, values):
+        max_date, max_temp = None, float('-inf')
+        min_date, min_temp = None, float('inf')
+
+        for date, tmx, tmn in values:
+            if tmx > max_temp:
+                max_temp = tmx
+                max_date = date
+            if tmn < min_temp:
+                min_temp = tmn
+                min_date = date
+
+        yield "Max Temperature", (max_date, max_temp)
+        yield "Min Temperature", (min_date, min_temp)
+
+
+if __name__ == "__main__":
+    CalculateMaxMinTemperature.run()
+
+# CLI
+
+cd desktop
+pip install mrjob
+python cool_hot_year.py weather.csv
+
+
+Theory:
+🔷 What is MapReduce?
+MapReduce is a programming model used in distributed computing to process large datasets. It breaks down the data processing into two phases:
+Map Phase:
+Processes input data in parallel.
+Emits key-value pairs (e.g., year → temperature).
+Reduce Phase:
+Aggregates values by keys.
+Computes results (e.g., min/max temperature for each year).
+
+🔷 Why MapReduce for Weather Data?
+Weather data is often huge and distributed.
+MapReduce allows parallel processing, ideal for large-scale log or sensor data.
+
+         ┌───────────────┐
+         │   Start Application        │
+         └─────────┬─────┘
+                   ▼
+         ┌───────────────┐
+         │   Load Weather Data    │
+         └─────────┬─────┘
+                   ▼
+         ┌──────────────┐
+         │    Map Function          │
+         │ (Extract year, temp)  │
+         └─────────┬────┘
+                   ▼
+         ┌────────────┐
+         │   Shuffle & Sort     │
+         │ (Group by year)     │
+         └─────────┬─ ─┘
+                   ▼
+         ┌───────────────┐
+         │   Reduce Function          │
+         │ (Find max/min per year)│
+         └─────────┬─────┘
+                   ▼
+         ┌───────────────┐
+         │ Find Coolest/Hottest   │
+         └─────────┬─────┘
+                   ▼
+         ┌─────────────┐
+         │      Display Result    │
+         └─────────────┘
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+'''Practical 4: Design and develop a distributed Hotel booking application using Java RMI. A distributed hotel
+booking system consists of the hotel server and the client machines. The server manages hotel
+rooms booking information. A customer can invoke the following operations at his machine i)
+Book the room for the specific guest ii) Cancel the booking of a guest.''''
+
+
+#HotelBooking.java file
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface HotelBooking extends Remote {
+    // Book a room for a specific guest
+    String bookRoom(String guestName, int roomNumber) throws RemoteException;
+    
+    // Cancel a booking for a specific guest
+    String cancelBooking(String guestName) throws RemoteException;
+    
+    // Get current bookings (for demonstration)
+    String listBookings() throws RemoteException;
+}
+
+
+#HotelBookingServer.java file
+
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
+import java.util.Map;
+
+public class HotelBookingServer extends UnicastRemoteObject implements HotelBooking {
+    private Map<Integer, String> bookings; // room number to guest name mapping
+    private static final int TOTAL_ROOMS = 10; // assuming hotel has 10 rooms
+    
+    public HotelBookingServer() throws RemoteException {
+        super();
+        bookings = new HashMap<>();
+    }
+    
+    @Override
+    public String bookRoom(String guestName, int roomNumber) throws RemoteException {
+        if (roomNumber < 1 || roomNumber > TOTAL_ROOMS) {
+            return "Invalid room number. Please choose between 1 and " + TOTAL_ROOMS;
+        }
+        
+        if (bookings.containsKey(roomNumber)) {
+            return "Room " + roomNumber + " is already booked by " + bookings.get(roomNumber);
+        }
+        
+        bookings.put(roomNumber, guestName);
+        return "Room " + roomNumber + " successfully booked for " + guestName;
+    }
+    
+    @Override
+    public String cancelBooking(String guestName) throws RemoteException {
+        for (Map.Entry<Integer, String> entry : bookings.entrySet()) {
+            if (entry.getValue().equals(guestName)) {
+                bookings.remove(entry.getKey());
+                return "Booking canceled for " + guestName;
+            }
+        }
+        return "No booking found for " + guestName;
+    }
+    
+    @Override
+    public String listBookings() throws RemoteException {
+        if (bookings.isEmpty()) {
+            return "No current bookings";
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        sb.append("Current Bookings:\n");
+        for (Map.Entry<Integer, String> entry : bookings.entrySet()) {
+            sb.append("Room ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+        }
+        return sb.toString();
+    }
+    
+    public static void main(String[] args) {
+        try {
+            // Create and export the server object
+            HotelBookingServer server = new HotelBookingServer();
+            
+            // Bind the server object to the RMI registry
+            java.rmi.Naming.rebind("HotelBookingService", server);
+            
+            System.out.println("Hotel Booking Server is ready...");
+        } catch (Exception e) {
+            System.err.println("Server exception: " + e.toString());
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+#HotelBookingClient.java file
+
+import java.rmi.Naming;
+import java.util.Scanner;
+
+public class HotelBookingClient {
+    public static void main(String[] args) {
+        try {
+            // Look up the remote object in the RMI registry
+            HotelBooking hotel = (HotelBooking) Naming.lookup("rmi://localhost/HotelBookingService");
+            
+            Scanner scanner = new Scanner(System.in);
+            
+            while (true) {
+                System.out.println("\nHotel Booking System");
+                System.out.println("1. Book a room");
+                System.out.println("2. Cancel booking");
+                System.out.println("3. View current bookings");
+                System.out.println("4. Exit");
+                System.out.print("Enter your choice: ");
+                
+                int choice = scanner.nextInt();
+                scanner.nextLine(); // consume newline
+                
+                switch (choice) {
+                    case 1:
+                        System.out.print("Enter guest name: ");
+                        String guestName = scanner.nextLine();
+                        System.out.print("Enter room number (1-10): ");
+                        int roomNumber = scanner.nextInt();
+                        System.out.println(hotel.bookRoom(guestName, roomNumber));
+                        break;
+                    case 2:
+                        System.out.print("Enter guest name to cancel booking: ");
+                        String cancelName = scanner.nextLine();
+                        System.out.println(hotel.cancelBooking(cancelName));
+                        break;
+                    case 3:
+                        System.out.println(hotel.listBookings());
+                        break;
+                    case 4:
+                        System.out.println("Exiting...");
+                        scanner.close();
+                        System.exit(0);
+                    default:
+                        System.out.println("Invalid choice");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Client exception: " + e.toString());
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Terminal 1:
+javac *.java
+
+start rmiregistry
+
+java HotelBookingServer
+
+Terminal 2:
+java HotelBookingClient
+
+
+Theory:
+🔷 What is Java RMI?
+Java RMI (Remote Method Invocation) is a Java API that allows an object on one Java Virtual Machine (JVM) to invoke methods on an object located in another JVM. It's a form of object-oriented Remote Procedure Call (RPC).
+
+📌 Key Features of RMI:
+Enables communication between remote Java objects.
+Supports pass-by-value and pass-by-reference semantics.
+Manages network communication, object serialization, and stub/skeleton handling.
+
+🔷 Components of RMI-based Hotel Booking System:
+Remote Interface – Declares the remote methods (bookRoom, cancelBooking).
+Server Implementation – Implements the remote interface, maintains booking data.
+RMI Server – Registers the remote object in the RMI registry.
+Client – Looks up the remote object and invokes booking methods.
+
+🔷 Benefits of Using Java RMI for Hotel Booking
+Simplicity: Directly invoke remote methods as if they were local.
+Object-Oriented: Method invocations preserve OOP principles.
+Platform Independent: Works across any systems running Java.
+Scalability: Easy to extend for multiple clients and server clusters.
+
+
+Client                              	         Server
+  |                                     	               |
+  |------ Connect via RMI Registry ------>|
+  |                                    	               |
+  |---- Invoke book/cancel method ------>|
+  |                                      	               |
+  |<---- Return result (Success/Fail) -----|
+  |                                      	              |
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
